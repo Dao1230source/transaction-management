@@ -151,7 +151,7 @@
                 <td>{{ transaction.fromAccount }}</td>
                 <td>{{ transaction.toAccount }}</td>
                 <td>{{ transaction.amount }}</td>
-                <td>{{ transaction.type === '0' ? '转账' : '红包' }}</td>
+                <td>{{ transaction.type === 0 ? '转账' : '红包' }}</td>
                 <td>{{ transaction.description }}</td>
                 <td>
                     <button @click="showEditDialog(transaction)">编辑</button>
