@@ -1,0 +1,20 @@
+# H2 内存数据库配置
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  # 启用 H2 控制台（浏览器访问）
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  # JPA 配置
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
+

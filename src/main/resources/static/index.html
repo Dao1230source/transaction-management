@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易记录管理</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .search-bar {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar label {
+            margin-right: 10px;
+        }
+
+        .search-bar input {
+            padding: 5px;
+            width: 200px;
+        }
+
+        .edit-dialog {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edit-dialog-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px;
+        }
+
+        .edit-dialog-content h2 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <h1>交易记录管理</h1>
+
+    <!-- 查询条件 -->
+    <div class="search-bar">
+        <label for="search-transactionId">交易ID:</label>
+        <input type="text" v-model="search.transactionId"/>
+
+        <label for="search-fromAccount">出方账号:</label>
+        <input type="text" v-model="search.fromAccount"/>
+
+        <label for="search-toAccount">入方账号:</label>
+        <input type="text" v-model="search.toAccount"/>
+
+        <label for="search-type">交易类型:</label>
+        <input type="text" v-model="search.type"/>
+
+        <button @click="fetchTransactions">查询</button>
+    </div>
+
+    <!-- 添加交易记录表单 -->
+    <div>
+        <h2>新增交易记录</h2>
+        <form @submit.prevent="addTransaction">
+            <label for="transactionId">交易ID:</label>
+            <input type="text" v-model="formData.transactionId" required>
+
+            <label for="fromAccount">出方账号:</label>
+            <input type="text" v-model="formData.fromAccount" required>
+
+            <label for="toAccount">入方账号:</label>
+            <input type="text" v-model="formData.toAccount" required>
+
+            <label for="amount">金额:</label>
+            <input type="number" v-model="formData.amount" required>
+
+            <label for="type">交易类型:</label>
+            <select v-model="formData.type" required>
+                <option value="0">转账</option>
+                <option value="1">红包</option>
+            </select>
+
+            <label for="description">描述:</label>
+            <input type="text" v-model="formData.description">
+
+            <button type="submit">提交</button>
+        </form>
+    </div>
+
+    <!-- 交易记录表格 -->
+    <div>
+        <h2>交易记录列表</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>交易ID</th>
+                <th>出方账号</th>
+                <th>入方账号</th>
+                <th>金额</th>
+                <th>交易类型</th>
+                <th>描述</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="transaction in paginatedTransactions" :key="transaction.transactionId">
+                <td>{{ transaction.transactionId }}</td>
+                <td>{{ transaction.fromAccount }}</td>
+                <td>{{ transaction.toAccount }}</td>
+                <td>{{ transaction.amount }}</td>
+                <td>{{ transaction.type === '0' ? '转账' : '红包' }}</td>
+                <td>{{ transaction.description }}</td>
+                <td>
+                    <button @click="showEditDialog(transaction)">编辑</button>
+                    <button @click="deleteTransaction(transaction.transactionId)">删除</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- 分页控件 -->
+        <div class="pagination">
+            <button @click="prevPage" :disabled="currentPage === 0">上一页</button>
+            <span>第 {{ currentPage + 1 }} 页 / 共 {{ totalPages }} 页</span>
+            <button @click="nextPage" :disabled="currentPage === totalPages - 1">下一页</button>
+        </div>
+    </div>
+
+    <!-- 编辑弹出框 -->
+    <div class="edit-dialog" v-if="isEditing">
+        <div class="edit-dialog-content">
+            <h2>编辑交易记录</h2>
+            <form @submit.prevent="saveEdit">
+                <label for="edit-transactionId">交易ID:</label>
+                <input type="text" v-model="editedTransaction.transactionId" required>
+
+                <label for="edit-fromAccount">出方账号:</label>
+                <input type="text" v-model="editedTransaction.fromAccount" required>
+
+                <label for="edit-toAccount">入方账号:</label>
+                <input type="text" v-model="editedTransaction.toAccount" required>
+
+                <label for="edit-amount">金额:</label>
+                <input type="number" v-model="editedTransaction.amount" required>
+
+                <label for="edit-type">交易类型:</label>
+                <select v-model="editedTransaction.type" required>
+                    <option value="0">转账</option>
+                    <option value="1">红包</option>
+                </select>
+
+                <label for="edit-description">描述:</label>
+                <input type="text" v-model="editedTransaction.description">
+
+                <button type="submit">保存</button>
+                <button type="button" @click="closeEditDialog">取消</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const {createApp} = Vue;
+
+    createApp({
+        data() {
+            return {
+                transactions: [], // 存储所有交易记录
+                formData: {
+                    transactionId: '',
+                    fromAccount: '',
+                    toAccount: '',
+                    amount: null,
+                    type: '0',
+                    description: ''
+                },
+                currentPage: 0, // 当前页码，默认为0
+                pageSize: 10, // 每页显示的记录数
+                editingTransaction: null, // 当前正在编辑的交易记录
+                search: {
+                    transactionId: '',
+                    fromAccount: '',
+                    toAccount: '',
+                    type: ''
+                }, // 查询条件
+                isEditing: false, // 是否显示编辑弹出框
+                editedTransaction: {} // 编辑弹出框中的交易记录
+            };
+        },
+        computed: {
+            // 分页后的交易记录
+            paginatedTransactions() {
+                const start = this.currentPage * this.pageSize;
+                const end = start + this.pageSize;
+                return this.transactions.slice(start, end);
+            },
+            // 总页数
+            totalPages() {
+                return Math.ceil(this.transactions.length / this.pageSize);
+            }
+        },
+        methods: {
+            // 获取分页交易记录
+            async fetchTransactions() {
+                try {
+                    let url = `http://localhost:8080/transaction/page?pageNumber=${this.currentPage}&pageSize=${this.pageSize}`;
+                    if (this.search.transactionId) {
+                        url += `&transactionId=${this.search.transactionId}`;
+                    }
+                    if (this.search.fromAccount) {
+                        url += `&fromAccount=${this.search.fromAccount}`;
+                    }
+                    if (this.search.toAccount) {
+                        url += `&toAccount=${this.search.toAccount}`;
+                    }
+                    if (this.search.type) {
+                        url += `&type=${this.search.type}`;
+                    }
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (response.ok) {
+                        this.transactions = data.data.content;
+                        this.totalPages = data.data.totalPages;
+                    } else {
+                        alert(`获取交易记录失败, ${data.message}[${data.extraMessage}]`);
+                    }
+                } catch (error) {
+                    alert('获取交易记录失败，请检查网络连接');
+                    console.error('获取交易记录失败:', error);
+                }
+            },
+            // 新增交易记录
+            async addTransaction() {
+                try {
+                    const response = await fetch('http://localhost:8080/transaction/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(this.formData)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        this.fetchTransactions();
+                    } else {
+                        alert(`新增交易记录失败, ${data.message}[${data.extraMessage}]`);
+                    }
+                } catch (error) {
+                    alert('新增交易记录失败，请检查网络连接');
+                    console.error('新增交易记录失败:', error);
+                }
+            },
+            // 删除交易记录
+            async deleteTransaction(transactionId) {
+                try {
+                    const response = await fetch(`http://localhost:8080/transaction/${transactionId}`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        this.fetchTransactions();
+                    } else {
+                        const data = await response.json();
+                        alert(`删除交易记录失败, ${data.message}[${data.extraMessage}]`);
+                    }
+                } catch (error) {
+                    alert('删除交易记录失败，请检查网络连接');
+                    console.error('删除交易记录失败:', error);
+                }
+            },
+            // 显示编辑弹出框
+            showEditDialog(transaction) {
+                this.editedTransaction = {...transaction};
+                this.isEditing = true;
+            },
+            // 保存编辑的交易记录
+            async saveEdit() {
+                try {
+                    const response = await fetch(`http://localhost:8080/transaction/${this.editedTransaction.transactionId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(this.editedTransaction)
+                    });
+                    if (response.ok) {
+                        this.isEditing = false;
+                        this.fetchTransactions();
+                    } else {
+                        const data = await response.json();
+                        alert(`更新交易记录失败, ${data.message}[${data.extraMessage}]`);
+                    }
+                } catch (error) {
+                    alert('更新交易记录失败，请检查网络连接');
+                    console.error('更新交易记录失败:', error);
+                }
+            },
+            // 关闭编辑弹出框
+            closeEditDialog() {
+                this.isEditing = false;
+                this.editedTransaction = {};
+            },
+            // 上一页
+            prevPage() {
+                if (this.currentPage > 0) {
+                    this.currentPage--;
+                    this.fetchTransactions();
+                }
+            },
+            // 下一页
+            nextPage() {
+                if (this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.fetchTransactions();
+                }
+            }
+        },
+        created() {
+            this.fetchTransactions();
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

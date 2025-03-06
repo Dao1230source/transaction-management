@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: transaction-management
+
+logging:
+  level:
+    org.source: debug
+
+org:
+  source:
+    web:
+      enabled:
+        config: false
+    spring:
+      cache:
+        redis-ttl: 3600
+        jvm-ttl: 3600
+      enabled:
+        uid: false
+        redis: false
+        redisson: false
