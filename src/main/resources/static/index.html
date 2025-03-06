@@ -246,7 +246,7 @@
             // 获取分页交易记录
             async fetchTransactions() {
                 try {
-                    let url = `http://localhost:8080/transaction/page?pageNumber=${this.currentPage}&pageSize=${this.pageSize}`;
+                    let url = `/transaction/page?pageNumber=${this.currentPage}&pageSize=${this.pageSize}`;
                     if (this.search.transactionId) {
                         url += `&transactionId=${this.search.transactionId}`;
                     }
@@ -275,7 +275,7 @@
             // 新增交易记录
             async addTransaction() {
                 try {
-                    const response = await fetch('http://localhost:8080/transaction/add', {
+                    const response = await fetch('/transaction/add', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -296,7 +296,7 @@
             // 删除交易记录
             async deleteTransaction(transactionId) {
                 try {
-                    const response = await fetch(`http://localhost:8080/transaction/${transactionId}`, {
+                    const response = await fetch(`/transaction/${transactionId}`, {
                         method: 'DELETE'
                     });
                     if (response.ok) {
@@ -318,7 +318,7 @@
             // 保存编辑的交易记录
             async saveEdit() {
                 try {
-                    const response = await fetch(`http://localhost:8080/transaction/${this.editedTransaction.transactionId}`, {
+                    const response = await fetch(`/transaction/${this.editedTransaction.transactionId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json'
