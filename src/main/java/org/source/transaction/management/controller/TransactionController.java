@@ -39,7 +39,7 @@ public class TransactionController {
         TransactionParam param = TransactionParam.builder().transactionId(transactionId).fromAccount(fromAccount)
                 .toAccount(toAccount).type(type).build();
         pageNumber = Objects.requireNonNullElse(pageNumber, Constants.PAGE_NUMBER_DEFAULT);
-        pageSize = Objects.requireNonNullElse(pageSize, Constants.PAGE_NUMBER_DEFAULT);
+        pageSize = Objects.requireNonNullElse(pageSize, Constants.PAGE_SIZE_DEFAULT);
         PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "updateTime"));
         return Response.success(transactionFacade.page(param, pageRequest));
     }
